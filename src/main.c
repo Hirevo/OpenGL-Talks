@@ -40,20 +40,52 @@ void handleEvents(GLFWwindow *win)
 int main(void)
 {
 	GLFWwindow *win = 0;
-	float val = 0.f;
-	float inc = 0.01f;
+
+	float vertices[] = {0, 0.5, -0.5, -0.5, 0.5, -0.5};
+	float color[] = {1, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 1};
+	float val = 0, inc = 0.01;
+	unsigned int vao, vbuffer, cbuffer, program;
 
 	if (init(&win) == false)
 		return 1;
+
+	GLCall(glGenVertexArrays(1, &vao));
+	GLCall(glBindVertexArray(vao));
+
+	GLCall(glEnableVertexAttribArray(0));
+	GLCall(glEnableVertexAttribArray(1));
+
+	GLCall(glGenBuffers(1, &vbuffer));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, vbuffer));
+	GLCall(glBufferData(
+		GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW));
+	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, true, 0, 0));
+
+	GLCall(glGenBuffers(1, &cbuffer));
+	GLCall(glBindBuffer(GL_ARRAY_BUFFER, cbuffer));
+	GLCall(glBufferData(
+		GL_ARRAY_BUFFER, sizeof(color), color, GL_STATIC_DRAW));
+	GLCall(glVertexAttribPointer(1, 4, GL_FLOAT, true, 0, 0));
+
+	program = compileProgramFromFile(
+		"shaders/vertex.vs", "shaders/fragment.fs");
+	GLCall(glUseProgram(program));
+
+	GLCall(glBindAttribLocation(program, 0, "aPos"));
+	GLCall(glBindAttribLocation(program, 1, "aColor"));
+
 	while (glfwWindowShouldClose(win) == false) {
-		GLCall(glClearColor(val, val, val, 1));
+		GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+
 		val += inc;
 		if (val >= 1)
 			inc = -0.01;
-		if (val <= 0)
+		if (val <= -1)
 			inc = 0.01;
 
-		GLCall(glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
+		GLCall(glUniform1f(glGetUniformLocation(program, "uVal"), val));
+
+		GLCall(glDrawArrays(GL_TRIANGLES, 0, 3));
 
 		glfwSwapBuffers(win);
 		handleEvents(win);
